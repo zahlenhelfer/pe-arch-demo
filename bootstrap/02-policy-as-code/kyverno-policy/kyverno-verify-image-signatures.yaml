@@ -31,8 +31,9 @@ spec:
       verifyImages:
         - imageReferences:
             - "*"
-          # Cosign 2.x signs with DSSE bundles (not the old hashedrekord format).
-          # type: SigstoreBundle tells Kyverno to use the new bundle verification path.
+          # Cosign 2.x signs with DSSE bundles stored as OCI referrer artifacts.
+          # type: SigstoreBundle tells Kyverno to use the sigstore-go verification path
+          # which finds these OCI referrer artifacts (not the legacy .sig tag).
           type: SigstoreBundle
           # Exempt images — keep in sync with kyverno-image-signature-exclusions-configmap.yaml
           skipImageReferences:
@@ -46,16 +47,17 @@ spec:
           attestors:
             - count: 1
               entries:
-                # GitHub Actions — tighten subject to your org in production:
-                # e.g. "https://github.com/myorg/*"
+                # GitHub Actions — actual SAN format is:
+                # https://github.com/<org>/<repo>/.github/workflows/<file>@refs/<ref>
+                # ** is required because sigstore-go's glob does not cross / with a single *.
                 - keyless:
-                    subject: "https://github.com/*"
+                    subject: "https://github.com/zahlenhelfer/**"
                     issuer: "https://token.actions.githubusercontent.com"
                     rekor:
                       url: https://rekor.sigstore.dev
                 # GitLab CI
                 - keyless:
-                    subject: "https://gitlab.com/*"
+                    subject: "https://gitlab.com/**"
                     issuer: "https://gitlab.com"
                     rekor:
                       url: https://rekor.sigstore.dev
