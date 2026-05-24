@@ -1,0 +1,67 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signatures-team-namespaces
+  annotations:
+    policies.kyverno.io/title: Verify Cosign Keyless Image Signatures in Team Namespaces
+    policies.kyverno.io/category: Software Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/minversion: 1.12.0
+    policies.kyverno.io/description: >-
+      Verifies that all container images (including init and ephemeral containers)
+      in team-* namespaces are signed with cosign keyless signing via OIDC (Sigstore
+      public infrastructure). Images matching patterns in skipImageReferences are
+      exempt — keep that list in sync with the image-signature-exclusions ConfigMap
+      in the kyverno namespace. Set validationFailureAction to Audit when onboarding
+      new namespaces.
+spec:
+  # Switch to Audit to observe violations without blocking pods during onboarding.
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: verify-cosign-keyless-signature
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - "team-*"
+      verifyImages:
+        - imageReferences:
+            - "*"
+          # Cosign 2.x signs with DSSE bundles (not the old hashedrekord format).
+          # type: SigstoreBundle tells Kyverno to use the new bundle verification path.
+          type: SigstoreBundle
+          # Exempt images — keep in sync with kyverno-image-signature-exclusions-configmap.yaml
+          skipImageReferences:
+            - "registry.k8s.io/pause:*"
+            - "docker.io/library/nginx:*"
+            - "docker.io/library/busybox:*"
+          # Pin verified images to their digest to prevent substitution after admission.
+          mutateDigest: true
+          verifyDigest: true
+          required: true
+          attestors:
+            - count: 1
+              entries:
+                # GitHub Actions — tighten subject to your org in production:
+                # e.g. "https://github.com/myorg/*"
+                - keyless:
+                    subject: "https://github.com/*"
+                    issuer: "https://token.actions.githubusercontent.com"
+                    rekor:
+                      url: https://rekor.sigstore.dev
+                # GitLab CI
+                - keyless:
+                    subject: "https://gitlab.com/*"
+                    issuer: "https://gitlab.com"
+                    rekor:
+                      url: https://rekor.sigstore.dev
+                # Google Cloud (Workload Identity / Cloud Build)
+                - keyless:
+                    subject: "*@*.iam.gserviceaccount.com"
+                    issuer: "https://accounts.google.com"
+                    rekor:
+                      url: https://rekor.sigstore.dev

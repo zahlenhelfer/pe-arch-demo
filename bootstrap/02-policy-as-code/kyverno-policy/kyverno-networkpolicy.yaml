@@ -1,0 +1,38 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: generate-networkpolicy-team-namespaces
+  annotations:
+    policies.kyverno.io/title: Generate Default-Deny Ingress NetworkPolicy for Team Namespaces
+    policies.kyverno.io/category: Other
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Namespace, NetworkPolicy
+    kyverno.io/kyverno-version: 1.7.0
+    policies.kyverno.io/minversion: 1.7.0
+    kyverno.io/kubernetes-version: "1.23"
+    policies.kyverno.io/description: Generates a default-deny ingress NetworkPolicy in any namespace whose name begins with "team-". The policy is created on namespace creation and kept in sync (regenerated if deleted or modified).
+spec:
+  generateExisting: true
+  rules:
+    - name: generate-default-deny-ingress
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              names:
+                - "team-*"
+      generate:
+        kind: NetworkPolicy
+        apiVersion: networking.k8s.io/v1
+        name: default-deny-ingress
+        namespace: "{{request.object.metadata.name}}"
+        synchronize: true
+        data:
+          metadata:
+            labels:
+              created-by: kyverno
+          spec:
+            podSelector: {}
+            policyTypes:
+              - Ingress
