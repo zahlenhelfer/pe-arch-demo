@@ -1,0 +1,21 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8steamcostcenterlabel
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sTeamCostcenterLabel
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8steamcostcenterlabel
+
+        violation[{"msg": msg}] {
+          ns := input.review.object.metadata.namespace
+          startswith(ns, "team-")
+          not input.review.object.metadata.labels.costcenter
+          name := input.review.object.metadata.name
+          msg := sprintf("Pod '%v' in namespace '%v' must have a 'costcenter' label", [name, ns])
+        }

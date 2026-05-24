@@ -1,0 +1,22 @@
+controllerManager:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+audit:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    release: grafana-stack
