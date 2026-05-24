@@ -1,0 +1,14 @@
+# traefik-values.yaml
+deployment:
+  replicas: 1
+
+providers:
+  kubernetesIngress:
+    enabled: true
+  kubernetesCRD:
+    enabled: true
+
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+
