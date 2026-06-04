@@ -1,0 +1,92 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: copy-fail
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: copy-fail
+  namespace: copy-fail
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      name: copy-fail
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: copy-fail
+          image: python:3.12-slim
+          securityContext:
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: Unconfined
+            capabilities:
+              drop: [ALL]
+          command: ["python3"]
+          args:
+            - "-c"
+            - |
+              import socket, os, ctypes, subprocess, time
+
+              print("=== CVE-2026-31431 copy.fail detection test ===")
+
+              # Stage 1 — AF_ALG socket (Rule 1: CRITICAL)
+              # Falco condition: evt.type=socket, evt.arg.domain=AF_ALG, evt.res>=0
+              print("[1] Opening AF_ALG socket (family 38)...")
+              try:
+                  s = socket.socket(38, socket.SOCK_SEQPACKET)
+                  print("[1] OK — Rule 1 should fire (CRITICAL: CVE-2026-31431 AF_ALG Socket)")
+                  s.close()
+              except OSError as e:
+                  print(f"[1] FAILED — socket error: {e}")
+
+              time.sleep(1)
+
+              # Stage 2 — splice() from non-root (Rule 2: WARNING)
+              # Falco condition: evt.type=splice, evt.dir=>, user.uid!=0
+              print("[2] Calling splice() via ctypes...")
+              try:
+                  libc = ctypes.CDLL("libc.so.6", use_errno=True)
+                  libc.splice.restype = ctypes.c_ssize_t
+                  r, w = os.pipe()
+                  os.write(w, b"x" * 1024)
+                  fd_out = os.open("/tmp/splice_test", os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
+                  ret = libc.splice(r, None, fd_out, None, ctypes.c_size_t(1024), ctypes.c_uint(0))
+                  print(f"[2] OK (splice returned {ret}) — Rule 2 should fire (WARNING: CVE-2026-31431 splice)")
+                  os.close(r); os.close(w); os.close(fd_out)
+              except Exception as e:
+                  print(f"[2] FAILED — {e}")
+
+              time.sleep(1)
+
+              # Stage 3 — setuid(0) from non-root (Rule 3: CRITICAL)
+              # Falco condition: evt.type=setuid, evt.dir=>, evt.arg.uid=0, user.uid!=0
+              # The syscall fires on exit even though it fails with EPERM.
+              print("[3] Calling setuid(0) (will be denied)...")
+              try:
+                  os.setuid(0)
+                  print("[3] setuid(0) succeeded — unexpected on a hardened kernel")
+              except PermissionError:
+                  print("[3] OK (denied with EPERM) — Rule 3 should fire (CRITICAL: CVE-2026-31431 setuid)")
+
+              time.sleep(1)
+
+              # Stage 4 — Python spawning su (Rule 4: CRITICAL)
+              # Falco condition: spawned_process, proc.pname in python list, proc.name=su
+              print("[4] Spawning su from Python...")
+              try:
+                  result = subprocess.run(["su", "-c", "id"], capture_output=True, timeout=3)
+                  print(f"[4] OK (su exited {result.returncode}) — Rule 4 should fire (CRITICAL: CVE-2026-31431 Python Spawning Setuid)")
+              except Exception as e:
+                  print(f"[4] FAILED — {e}")
+
+              print()
+              print("=== Test complete — check Falco logs for 4 alerts ===")
+              print("  kubectl logs -n falco-system -l app.kubernetes.io/name=falco | grep CVE-2026-31431")

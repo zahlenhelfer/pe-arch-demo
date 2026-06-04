@@ -1,0 +1,17 @@
+driver:
+  kind: modern_ebpf
+
+falcosidekick:
+  enabled: true
+
+metrics:
+  enabled: true
+  interval: 15s
+  resourceUtilizationEnabled: true
+  stateCountersEnabled: true
+  kernelEventCountersEnabled: true
+
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    release: grafana-stack
