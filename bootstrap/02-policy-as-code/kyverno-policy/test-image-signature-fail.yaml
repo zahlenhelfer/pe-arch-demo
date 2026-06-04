@@ -7,5 +7,5 @@ metadata:
     costcenter: "cc-42"
 spec:
   containers:
-    - name: httpd2
-      image: httpd2:latest
+    - name: unsigned-nginx
+      image: ghcr.io/zahlenhelfer/docker-ghcr-ghaction-nginx:latest

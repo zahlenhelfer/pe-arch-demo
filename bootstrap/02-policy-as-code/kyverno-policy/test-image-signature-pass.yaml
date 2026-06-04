@@ -8,4 +8,4 @@ metadata:
 spec:
   containers:
     - name: test
-      image: ghcr.io/zahlenhelfer/teams-api:1.1.2
+      image: ghcr.io/zahlenhelfer/teams-api:1.1.7

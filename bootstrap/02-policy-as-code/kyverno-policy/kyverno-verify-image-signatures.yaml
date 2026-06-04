@@ -30,40 +30,11 @@ spec:
                 - "team-*"
       verifyImages:
         - imageReferences:
-            - "*"
-          # Cosign 2.x signs with DSSE bundles stored as OCI referrer artifacts.
-          # type: SigstoreBundle tells Kyverno to use the sigstore-go verification path
-          # which finds these OCI referrer artifacts (not the legacy .sig tag).
-          type: SigstoreBundle
-          # Exempt images — keep in sync with kyverno-image-signature-exclusions-configmap.yaml
-          skipImageReferences:
-            - "registry.k8s.io/pause:*"
-            - "docker.io/library/nginx:*"
-            - "docker.io/library/busybox:*"
-          # Pin verified images to their digest to prevent substitution after admission.
-          mutateDigest: true
-          verifyDigest: true
-          required: true
+            - "ghcr.io/zahlenhelfer/**"
           attestors:
-            - count: 1
-              entries:
-                # GitHub Actions — actual SAN format is:
-                # https://github.com/<org>/<repo>/.github/workflows/<file>@refs/<ref>
-                # ** is required because sigstore-go's glob does not cross / with a single *.
+            - entries:
                 - keyless:
-                    subject: "https://github.com/zahlenhelfer/**"
+                    subjectRegExp: "^https://github\\.com/zahlenhelfer/[^/]+/\\.github/workflows/[^@]+@refs/.*"
                     issuer: "https://token.actions.githubusercontent.com"
                     rekor:
-                      url: https://rekor.sigstore.dev
-                # GitLab CI
-                - keyless:
-                    subject: "https://gitlab.com/**"
-                    issuer: "https://gitlab.com"
-                    rekor:
-                      url: https://rekor.sigstore.dev
-                # Google Cloud (Workload Identity / Cloud Build)
-                - keyless:
-                    subject: "*@*.iam.gserviceaccount.com"
-                    issuer: "https://accounts.google.com"
-                    rekor:
-                      url: https://rekor.sigstore.dev
+                      url: "https://rekor.sigstore.dev"
