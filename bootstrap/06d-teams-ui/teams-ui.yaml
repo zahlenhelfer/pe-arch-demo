@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
         - name: teams-ui
-          image: ghcr.io/zahlenhelfer/teams-ui:1.2.0
+          image: ghcr.io/zahlenhelfer/teams-ui:1.3.0
           ports:
             - containerPort: 80
           env:
