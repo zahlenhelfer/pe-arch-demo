@@ -33,7 +33,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: teams-api
-          image: ghcr.io/zahlenhelfer/teams-api:1
+          image: ghcr.io/zahlenhelfer/teams-api:1.1.3
           ports:
             - containerPort: 8000
           env:
