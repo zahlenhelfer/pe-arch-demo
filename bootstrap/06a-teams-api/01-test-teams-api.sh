@@ -7,7 +7,7 @@ echo "Test 2 - Checking the Health Endpoint"
 curl http://teams-api.172.18.255.254.sslip.io/health
 
 echo "Test 3 - Testing Teams API by Creating a Team"
-curl -X POST "http://teams-api.172.18.255.254.sslip.io/teams" -H "Content-Type:application/json" -d "{\"name\": \"Demo-Team\"}"
+curl -X POST "http://teams-api.172.18.255.254.sslip.io/teams" -H "Content-Type:application/json" -d "{\"name\": \"API-Demo\"}"
 
 echo "Test 4 - Listing All Teams to Verify Creation"
 curl http://teams-api.172.18.255.254.sslip.io/teams | jq
